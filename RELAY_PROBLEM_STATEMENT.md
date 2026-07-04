@@ -36,6 +36,8 @@ There is no drag-and-drop builder to build. Workflows are created via API (as JS
 
 ## Recommended Demo Flow
 
+Steps 2–4 and 8 need a real (free-tier or local) model configured for the AI nodes; everything else runs against the provided mocks alone. See the FAQ in `docs/IMPLEMENTATION_GUIDE.md`.
+
 Your final demo should be able to show this flow clearly:
 
 1. Start the mock world server and your engine; show the console with the seeded workflows.

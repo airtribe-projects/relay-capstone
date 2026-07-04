@@ -116,7 +116,21 @@ The exact field names beyond `status`, `steps[].node_id`, and `steps[].status` a
 
 Record who decided and when. With a single demo token, the decider can be a constant — the field must still exist.
 
-### 5. Compile from Natural Language (Good To Have)
+### 5. Cancel a Run
+
+`POST /runs/{runId}/cancel`
+
+Expected behavior:
+
+- A `queued` run ends `cancelled` without executing anything.
+- A `running` run stops cooperatively: the engine checks for cancellation between steps. The step currently in flight is allowed to finish (or fail) — mid-step abort is not required — and no further nodes execute.
+- A `waiting_approval` run ends `cancelled` and its pending approval is closed (no longer actionable, not listed as pending).
+- Cancelling a run that is already terminal (`succeeded`, `failed`, `cancelled`) returns 409.
+- The run records that it ended by cancellation.
+
+Note that rejecting an approval also ends the run `cancelled` — same terminal state, two doors.
+
+### 6. Compile from Natural Language (Good To Have)
 
 Applies only if you attempt the Good To Have compiler.
 
@@ -141,7 +155,7 @@ Refusal (for trap cases) →
 
 The compiler must never emit node types outside the catalog. If the description implies a sensitive action (`order_action`), the generated workflow must place an `approval` node before it.
 
-### 6. Error Responses
+### 7. Error Responses
 
 Every rejection returns a clear error body:
 
@@ -159,6 +173,7 @@ Suggested mapping:
 | Invalid definition (create or publish) | 400 or 422 |
 | Triggering an unpublished workflow | 400 or 409 |
 | Approving an already-decided approval | 409 |
+| Cancelling an already-terminal run | 409 |
 
 You may choose different codes if documented, but each case must be distinguishable from the body.
 
