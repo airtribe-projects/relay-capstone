@@ -32,8 +32,6 @@ The provided Python scripts are optional local utilities. They are not part of t
 
 Relay has a clear core scope. Build the Must Have features first. Good To Have and Stretch features should only be attempted after the core engine works end to end.
 
-Relay is the distributed-systems-heavy option in the capstone set. Most of the effort goes into the execution engine — durability, idempotency, state machines, recovery — with the AI concentrated in the nodes making decisions inside runs. The flagship Good To Have, a compiler that turns plain English into workflow definitions, is waiting for you once the engine is solid. Pick Relay if orchestration is the kind of engineering you want to show.
-
 There is no drag-and-drop builder to build. Workflows are created via API (as JSON). The frontend is a read-and-operate console: workflow list, run history, run traces, and pending approvals.
 
 ## Recommended Demo Flow
