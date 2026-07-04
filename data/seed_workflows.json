@@ -1,5 +1,5 @@
 {
-  "_comment": "Seed workflows. Load these at startup as Published (version 1). This JSON shape is the canonical workflow-definition contract: id, name, trigger, entry, nodes[] with next/on_true/on_false pointers, and limits. The smoke test creates workflows in this same shape. MOCK_WORLD_URL defaults to http://localhost:9210 and should be engine configuration.",
+  "_comment": "Seed workflows. Load these at startup as Published. This JSON shape is the canonical workflow-definition contract: id, name, trigger, entry, nodes[] with next/on_true/on_false pointers, and limits. Only limits.max_steps enforcement is Must Have; timeout_seconds and max_ai_tokens are carried for the Good To Have caps. The smoke test creates workflows in this same shape. MOCK_WORLD_URL defaults to http://localhost:9210 and should be engine configuration.",
   "workflows": [
     {
       "id": "wf_support_triage",

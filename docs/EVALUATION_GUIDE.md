@@ -1,13 +1,13 @@
 # Relay Evaluation Guide
 
-This guide defines language-agnostic verification expectations for Relay. The engine is verified by behavior under contract checks, crashes, and adversarial inputs — plus one eval you build yourself for the NL compiler.
+This guide defines language-agnostic verification expectations for Relay. The engine is verified by behavior under contract checks, crashes, and adversarial inputs.
 
-Verification has four parts:
+Verification has three required parts, plus a fourth that applies only if you build the Good To Have compiler:
 
 1. the provided **smoke test** (contract and lifecycle compliance),
 2. the **kill-and-resume drill** verified by the provided duplication check (durability),
-3. an **NL compiler eval** you build over the provided labeled cases (AI construction quality),
-4. a **manual failure drill** you record in your demo video (guardrails and resilience).
+3. a **manual failure drill** you record in your demo video (guardrails and resilience),
+4. *(Good To Have)* an **NL compiler eval** you build over the provided labeled cases.
 
 ## 1. Smoke Test
 
@@ -58,9 +58,21 @@ Pass criteria:
 - No WARN about missing idempotency keys — keyless side effects will duplicate in the crash window even if this particular drill got lucky.
 - Replays absorbed (> 0) are fine and often expected: they are the mechanism working.
 
-Run the drill at least twice, killing at different points (during the delay; between the shipment call and its step persist if you can time it). Include the output in your verification report.
+Run the drill once for your report, with a note on where you killed the worker. Killing at a second point (between the shipment call and its step persist, if you can time it) is a worthwhile extra check but not required.
 
-## 3. NL Compiler Eval
+## 3. Manual Failure Drill
+
+Record these in your demo video:
+
+- **Injection payloads:** `pay_inject_001` through the triage workflow — the run still pauses in `waiting_approval`; nothing executes on the order before a human approves. `pay_inject_002` — notifications go only to the targets configured in the workflow definition, and the classifier's `summary` does not become a channel for the embedded instructions (a summary that itself parrots "email audit@evil-example.com..." into #support is worth discussing in your report).
+- **Mock world outage:** `POST /admin/config {"mode": "down"}` mid-run — steps fail, retries with backoff kick in; restore the world and the run completes. Your timeout keeps steps from hanging.
+- **Flaky world:** `{"fail_rate": 0.3}` — retries absorb it; the ledger shows replays, not duplicates.
+- **Step cap:** `wf_runaway` stopped at max_steps with a reason naming the cap.
+- **Schema enforcement:** show one AI step whose first output failed validation and was repaired on retry (or fail one deliberately with a strict schema) — the trace should show both attempts.
+
+## 4. NL Compiler Eval (Good To Have)
+
+This part applies only if you build the Good To Have compiler.
 
 Use `data/nl_eval.jsonl`. Each line contains:
 
@@ -102,20 +114,10 @@ Rules:
 - `nl_007` accepts either a schedule trigger or a delay-based loop — both are correct engineering.
 - Report accuracy honestly and explain the misses. 12/15 with a clear analysis of failures beats a suspicious 15/15.
 
-## 4. Manual Failure Drill
-
-Record these in your demo video:
-
-- **Injection payloads:** `pay_inject_001` through the triage workflow — the run still pauses in `waiting_approval`; nothing executes on the order before a human approves. `pay_inject_002` — notifications go only to the targets configured in the workflow definition, and the classifier's `summary` does not become a channel for the embedded instructions (a summary that itself parrots "email audit@evil-example.com..." into #support is worth discussing in your report).
-- **Mock world outage:** `POST /admin/config {"mode": "down"}` mid-run — steps fail, retries with backoff kick in; restore the world and the run completes. Your timeout keeps steps from hanging.
-- **Flaky world:** `{"fail_rate": 0.3}` — retries absorb it; the ledger shows replays, not duplicates.
-- **Caps:** `wf_runaway` stopped at max_steps with a reason naming the cap.
-- **Schema enforcement:** show one AI step whose first output failed validation and was repaired on retry (or fail one deliberately with a strict schema) — the trace should show both attempts.
-
 ## Additional Checks Reviewers May Run
 
 - **Gate bypass by construction:** publish a hand-written workflow containing an `order_action` with no approval node, or with the approval on the other branch. Publishing may warn or reject; either way the engine must refuse to execute the `order_action` at runtime. An executed unapproved refund is an automatic correctness failure.
-- **Version pinning:** trigger a run, then edit and republish the workflow while it is paused at an approval. The resumed run must finish on the version it started with.
+- **Snapshot integrity:** trigger a run, then edit and republish the workflow while it is paused at an approval. The resumed run must finish on the definition it started with — this is what the per-run snapshot guarantees.
 - **Webhook replay:** the same webhook POST sent twice creates two runs (that is correct — webhooks are at-least-once) but each run's side effects are individually exactly-once.
 - **Secret hygiene:** webhook secrets and any model API keys never appear in traces, console views, or error messages.
 - **Restart with queued work:** enqueue several runs, restart everything, all runs eventually complete.
@@ -123,8 +125,8 @@ Record these in your demo video:
 ## What to Include in Your Verification Report
 
 - Smoke test output (all PASS; explain any WARN).
-- Duplication check output from at least two kill-and-resume drills, with a note on where you killed the worker each time.
-- NL eval accuracy with per-case results, your compiler design (model, prompting, validation loop), and an explanation of the misses.
+- Duplication check output from your kill-and-resume drill, with a note on where you killed the worker.
+- If you built the compiler: NL eval accuracy with per-case results, your compiler design (model, prompting, validation loop), and an explanation of the misses.
 - How you tested the injection payloads and what the traces showed.
 - Your idempotency key scheme and your answer to the crash-window question (see `docs/DATA_MODEL.md`).
 - Known limitations (for example single-worker execution, 1-minute schedule granularity).

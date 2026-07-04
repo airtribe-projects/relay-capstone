@@ -23,7 +23,7 @@ Everything else — route names, pagination, extra fields, the compile endpoint'
 
 ## Personas
 
-- `builder`: Creates and publishes workflows (via API or the NL compiler).
+- `builder`: Creates and publishes workflows via API (or the Good To Have NL compiler).
 - `operator`: Watches runs, reads traces, cancels stuck runs.
 - `approver`: Reviews and decides pending approvals.
 - `external caller`: A system POSTing to a webhook URL with the workflow's secret. Unauthenticated beyond the secret.
@@ -37,10 +37,10 @@ For Must Have, a single demo token covering builder/operator/approver is fine. R
 
 ## Core Resources
 
-- Workflow (draft or published) and its immutable versions
-- Run and its steps (the trace)
+- Workflow (draft or published)
+- Run (with its definition snapshot) and its steps (the trace)
 - Approval
-- Schedule (for cron triggers)
+- Schedule (for cron triggers — Good To Have)
 
 ## Core API Flows
 
@@ -83,7 +83,6 @@ Both routes must enqueue and return promptly; execution happens on the worker.
 {
   "run_id": "run_01h9...",
   "workflow_id": "wf_expense_approval",
-  "workflow_version": 1,
   "status": "waiting_approval",
   "started_at": "2026-07-04T10:02:11Z",
   "steps": [
@@ -117,7 +116,9 @@ The exact field names beyond `status`, `steps[].node_id`, and `steps[].status` a
 
 Record who decided and when. With a single demo token, the decider can be a constant — the field must still exist.
 
-### 5. Compile from Natural Language
+### 5. Compile from Natural Language (Good To Have)
+
+Applies only if you attempt the Good To Have compiler.
 
 `POST /workflows/compile` (shape suggested, not fixed):
 
@@ -167,6 +168,6 @@ Not routes, but behavior the reviewer will check:
 
 - **Idempotency keys:** every side-effect call to the mock world (`notify`, `order_action`, mutating `http_request`) carries an `Idempotency-Key` header that is stable across retries and resumes of the same step — `{run_id}:{node_id}` is the canonical choice. Do not include the attempt number: a retry must reuse the key, or replay detection cannot work.
 - **Approval gating:** a node whose catalog entry has `requires_approval: true` must not execute unless an `approval` node earlier in the same run was approved. This is engine logic; no prompt text can override it.
-- **Caps:** when `limits.max_steps`, `limits.timeout_seconds`, or `limits.max_ai_tokens` is exceeded, the run ends `failed` with a reason that names the cap.
+- **Step cap:** when `limits.max_steps` is exceeded, the run ends `failed` with a reason that names the cap. (`limits.timeout_seconds` and `limits.max_ai_tokens` are Good To Have; the seed definitions carry the fields for engines that implement them.)
 - **AI output:** validated against the node's `output_schema`; one retry with the validation error appended; then the step fails.
 - **Timeouts:** every call to the mock world or a model provider has a timeout; a hung dependency fails the step (and triggers retry/backoff), never the engine.
